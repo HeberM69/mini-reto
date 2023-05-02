@@ -26,6 +26,7 @@ function App() {
   const handleNotInsertar=()=>setInsertar(false);
 
   const [form, setForm] = useState({
+    id: "",
     name: "",
     cover: "",
     genre: "",
@@ -90,6 +91,7 @@ function App() {
   //Funcion para seleccionar pelicula metodo put
   const selectMovie = (movie) => {
     setForm({
+      id: movie.id,
       name: movie.name,
       cover: movie.cover,
       genre: movie.genre,
@@ -184,6 +186,8 @@ function App() {
           </ModalHeader>
           <ModalBody>
             <div className="form-group">
+              <label htmlFor="name">ID</label>
+              <input className='form-control' type="text" name="id" id="id" readOnly onChange={handleChange} value={form?form.id: movies.length+1}/>
               <label htmlFor="name">Name</label>
               <input className='form-control' type="text" name="name" id="name" onChange={handleChange} value={form?form.name: ''}/>
               <br/>
