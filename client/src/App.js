@@ -3,6 +3,7 @@ import './App.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import {Modal, ModalBody, ModalHeader, ModalFooter} from 'react-bootstrap';
 import {show, Button} from 'react-bootstrap';
+import axios from 'axios';
 
 const API_IMG = "https://image.tmdb.org/t/p/w500";
 
@@ -25,52 +26,75 @@ function App() {
   const handleNotInsertar=()=>setInsertar(false);
 
   const [form, setForm] = useState({
-    title: "",
-    poster_path: "",
-    vote_average: "",
-    release_date: "",
-    overview: "",
+    name: "",
+    cover: "",
+    genre: "",
+    director: "",
+    summary: "",
     tipoModal: ""
   });
 
   const [tipoModal, setTipoModal] = useState("");
 
-  //PETICION GET
-  const fetchData = () => {
-    fetch(API_URL)
-    .then(res => res.json())
-    .then(data => {
-      console.log(data);
-    //  console.log(data.results);
 
-      setMovies(data.results);
-      setShow(Array(data.length).fill(false));
-
-      //console.log(); // add this line to see what data is being returned
+  const peticionGet = () => {
+    axios.get("http://localhost:3001/movies/").then(response => {
+      setMovies(response.data.data); //.data.data porque en el backend se envia un objeto con la propiedad data
+    }).catch(error => {
+      console.log(error);
     })
-    .catch((err) => {
-      console.error(err)
-    });
-  };
+  }
+
+
+  //PETICION GET
+  // const fetchData = () => {
+  //   fetch(API_URL)
+  //   .then(res => res.json())
+  //   .then(data => {
+  //     console.log(data);
+  //   //  console.log(data.results);
+
+  //     setMovies(data.results);
+  //     setShow(Array(data.length).fill(false));
+
+  //     //console.log(); // add this line to see what data is being returned
+  //   })
+  //   .catch((err) => {
+  //     console.error(err)
+  //   });
+  // };
 
   //Se usa useEffect para hacer la peticion a la API
   useEffect(() => {
-    fetchData();
+    //fetchData();
+    peticionGet();
+    console.log(movies);
+
   }, []);
 
-  //PETICION POST para agregar una pelicula con los inputs del usuario
-  const postMovie = async () => {
-
+  //PETICION POST  
+  //! DA UN ERROR CON LA BASE DE DATOS
+  //para agregar una pelicula con los inputs del usuario
+  const postMovie = async() => {
+    await axios
+      .post("http://localhost:3001/movies", form)
+      .then(response => {
+        handleInsertar();
+        peticionGet();
+      })
+      .catch(error => {
+        console.log(error.message);
+      });
   };
 
   //Funcion para seleccionar pelicula metodo put
   const selectMovie = (movie) => {
     setForm({
-      title: movie.title,
-      poster_path: movie.poster_path,
-      vote_average: movie.vote_average,
-      release_date: movie.release_date,
-      overview: movie.overview,
+      name: movie.name,
+      cover: movie.cover,
+      genre: movie.genre,
+      director: movie.director,
+      summary: movie.summary,
     });
   };
 
@@ -92,39 +116,19 @@ function App() {
   };
 
   //PETICION PUT
+  //!ERROR CON UN PEDO DEL ID, FORM.ID NO EXISTE PERO VER COMO SE USA EN LA DB
   const putMovie = () => {
-    var data = {
-      title: form.title,
-      poster_path: form.poster_path,
-      vote_average: form.vote_average,
-      release_date: form.release_date,
-      overview: form.overview,
-    };
-    console.log(data);
-    var url = "http://localhost:3000/movies/" + form.id;
-    fetch(url, {
-      method: "PUT",
-      body: JSON.stringify(data),
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((response) => response.json())
-    .then((response) => fetchData())
-    .catch((err) => console.error(err));
-    handleInsertar();
+    axios.put("http://localhost:3000/movies/" + form.id, form).then((response) => {
+      handleNotInsertar();
+      peticionGet();
+    });
   };
 
   //PETICION DELETE
   const deleteMovie = (movie) => {
-    var url = "http://localhost:3000/movies/" + movie.id;
-    fetch(url, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }).then((response) => response.json())
-    .then((response) => fetchData())
-    .catch((err) => console.error(err));
+    axios.delete("http://localhost:3000/movies/" + form.id).then((response) => {
+    peticionGet();
+    });
   };
 
 
@@ -137,10 +141,11 @@ function App() {
       <br/><br/>
       <div className='grid'>
 
+      {console.log(movies)}
       {Array.prototype.map.call(movies, (movieReq, index) => (
         <div key={movieReq.id} className="card text-center bg-secendary mb-3">
           <div className="card-body">
-            <img className="card-img-top" src={API_IMG + movieReq.poster_path} alt={movieReq.title} />
+            <img className="card-img-top" src={movieReq.cover} alt={movieReq.name} />
             <div className="card-body">
               <button type="button" className="btn btn-dark" onClick={() => setShow([...show.slice(0, index), true, ...show.slice(index+1)])}>View More</button>
               <button className='btn btn-success' onClick={() => {
@@ -151,16 +156,16 @@ function App() {
               <button type="button" className='btn btn-danger' onClick={() => deleteMovie(movieReq.id)}>Delete</button>
               <Modal show={show[index]} onHide={() => setShow([...show.slice(0, index), false, ...show.slice(index+1)])}>
                 <Modal.Header closeButton>
-                  <Modal.Title>{movieReq.title}</Modal.Title>
+                  <Modal.Title>{movieReq.name}</Modal.Title>
                 </Modal.Header>
                 <Modal.Body>
-                  <img className="card-img-top" src={API_IMG + movieReq.poster_path} alt={movieReq.title} />
-                  <h3>{movieReq.title}</h3>
-                  <h4>ImDb: {movieReq.vote_average}</h4>
-                  <h5>Release Date: {movieReq.release_date}</h5>
+                  <img className="card-img-top" src={movieReq.cover} alt={movieReq.name} />
+                  <h3>{movieReq.name}</h3>
+                  <h4>Genre: {movieReq.genre}</h4>
+                  <h5>Director: {movieReq.director}</h5>
                   <br></br>
-                  <h6>Overview</h6>
-                  <p>{movieReq.overview}</p>
+                  <h6>Summary</h6>
+                  <p>{movieReq.summary}</p>
                 </Modal.Body>
                 <Modal.Footer>
                   <Button varient="secondary" onClick={() => setShow([...show.slice(0, index), false, ...show.slice(index+1)])}>Close</Button>
@@ -171,15 +176,6 @@ function App() {
         </div>
       ))}
 
-        
-
-
-        
-
-
-
-
-
       </div>
 
       <Modal show={insertar} onHide={handleNotInsertar}>
@@ -188,26 +184,26 @@ function App() {
           </ModalHeader>
           <ModalBody>
             <div className="form-group">
-              <label htmlFor="title">Title</label>
-              <input className='form-control' type="text" name="title" id="title" onChange={handleChange} value={form?form.title: ''}/>
+              <label htmlFor="name">Name</label>
+              <input className='form-control' type="text" name="name" id="name" onChange={handleChange} value={form?form.name: ''}/>
               <br/>
-              <label htmlFor="poster_path">Poster path</label>
-              <input className='form-control' type="text" name="poster_path" id="poster_path" onChange={handleChange} value={form?form.poster_path: ''}/>
+              <label htmlFor="cover">Poster path</label>
+              <input className='form-control' type="text" name="cover" id="cover" onChange={handleChange} value={form?form.cover: ''}/>
               <br/>
-              <label htmlFor="vote_average">Vote average</label>
-              <input className='form-control' type="text" name="vote_average" id="vote_average" onChange={handleChange} value={form?form.vote_average: ''}/>
+              <label htmlFor="genre">Vote average</label>
+              <input className='form-control' type="text" name="genre" id="genre" onChange={handleChange} value={form?form.genre: ''}/>
               <br/>
-              <label htmlFor="release_date">Release date</label>
-              <input className='form-control' type="text" name="release_date" id="release_date" onChange={handleChange} value={form?form.release_date: ''}/>
+              <label htmlFor="director">Release date</label>
+              <input className='form-control' type="text" name="director" id="director" onChange={handleChange} value={form?form.director: ''}/>
               <br/>
-              <label htmlFor="overview">Overview</label>
-              <textarea className='form-control' type="text" name="overview" id="overview" onChange={handleChange} value={form?form.overview: ''}/>
+              <label htmlFor="summary">summary</label>
+              <textarea className='form-control' type="text" name="summary" id="summary" onChange={handleChange} value={form?form.summary: ''}/>
             </div>
           </ModalBody>
           
           <ModalFooter>
             {tipoModal =='insertar'?
-            <button className="btn btn-success">Insertar</button>:  //En esta linea poner onCLick={postMovie} cuando sirva
+            <button className="btn btn-success" onClick={postMovie}>Insertar</button>:  //En esta linea poner onCLick={postMovie} cuando sirva
             <button className="btn btn-primary" onClick={putMovie}>Actualizar</button>
           }
             <button className="btn btn-danger" onClick={handleNotInsertar}>Cancelar</button>
